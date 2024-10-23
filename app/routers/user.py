@@ -93,7 +93,8 @@ def delete_user(
             detail=f"User with id: {id} does not exist"
         )
 
-    if current_user.user_id != id:
+    # Allow deletion if the current user is the owner or an admin
+    if current_user.user_id != id and current_user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this account"

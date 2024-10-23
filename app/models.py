@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import TIMESTAMP
@@ -36,6 +36,8 @@ class User(Base):
     )
     comments = relationship('Comment', back_populates='user', cascade='all, delete-orphan')
 
+# models.py
+
 class Post(Base):
     __tablename__ = "posts"
     post_id = Column(Integer, primary_key=True, nullable=False)
@@ -56,21 +58,17 @@ class Post(Base):
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False
     )
-    user = relationship(
-        "User",
-        back_populates="posts",
-        foreign_keys=[user_id]
+    thread_id = Column(
+        Integer,
+        ForeignKey("threads.thread_id", ondelete="CASCADE"),
+        nullable=True  # Make thread_id nullable
     )
-    profile_user = relationship(
-        "User",
-        back_populates="profile_posts",
-        foreign_keys=[profile_user_id]
-    )
-    comments = relationship(
-        'Comment',
-        back_populates='post',
-        cascade='all, delete-orphan'
-    )
+    # Relationships
+    user = relationship("User", back_populates="posts", foreign_keys=[user_id])
+    profile_user = relationship("User", back_populates="profile_posts", foreign_keys=[profile_user_id])
+    comments = relationship('Comment', back_populates='post', cascade='all, delete-orphan')
+    thread = relationship('Thread', back_populates='posts', foreign_keys=[thread_id])
+
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -110,9 +108,14 @@ class Comment(Base):
 class Thread(Base):
     __tablename__ = "threads"
     thread_id = Column(Integer, primary_key=True, nullable=False)
-    thread_name = Column(String, nullable=False)
+    thread_name = Column(String, nullable=False, unique=True)  # Add unique=True
     date_created = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    posts = relationship('Post', back_populates='thread', cascade='all, delete-orphan')
+    # Optional: Add a UniqueConstraint
+    __table_args__ = (
+        UniqueConstraint('thread_name', name='unique_thread_name'),
+    )
 
 class Message(Base):
     __tablename__ = "messages"

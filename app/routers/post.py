@@ -13,6 +13,7 @@ router = APIRouter(
 
 @router.get("/", response_model=List[schemas.PostOut])
 def get_posts(
+    thread_id: Optional[int] = None,
     profile_user_id: Optional[int] = None,
     search: Optional[str] = "",
     db: Session = Depends(get_db),
@@ -20,13 +21,19 @@ def get_posts(
 ):
     posts_query = db.query(models.Post).options(
         joinedload(models.Post.user),
-        subqueryload(models.Post.comments).joinedload(models.Comment.replies)
+        subqueryload(models.Post.comments).joinedload(models.Comment.replies),
+        joinedload(models.Post.thread)
     )
 
-    if profile_user_id is not None:
+    if thread_id is not None:
+        # Fetch posts belonging to a specific thread
+        posts_query = posts_query.filter(models.Post.thread_id == thread_id)
+    elif profile_user_id is not None:
+        # Fetch personal posts of a user
         posts_query = posts_query.filter(models.Post.profile_user_id == profile_user_id)
     else:
-        posts_query = posts_query.filter(models.Post.user_id == current_user.user_id)
+        # Fetch all posts (you may adjust this logic as needed)
+        posts_query = posts_query.filter(models.Post.thread_id == None)
 
     if search:
         posts_query = posts_query.filter(models.Post.content.contains(search))
@@ -40,6 +47,12 @@ def create_post(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
+    if post.thread_id:
+        # Validate that the thread exists
+        thread = db.query(models.Thread).filter(models.Thread.thread_id == post.thread_id).first()
+        if not thread:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+
     new_post = models.Post(
         user_id=current_user.user_id,
         **post.dict(exclude_unset=True)
@@ -50,10 +63,12 @@ def create_post(
 
     post_with_user = db.query(models.Post).options(
         joinedload(models.Post.user),
-        subqueryload(models.Post.comments).joinedload(models.Comment.replies)
+        subqueryload(models.Post.comments).joinedload(models.Comment.replies),
+        joinedload(models.Post.thread)
     ).filter(models.Post.post_id == new_post.post_id).first()
 
     return post_with_user
+
 
 @router.get("/{id}", response_model=schemas.PostOut)
 def get_post(

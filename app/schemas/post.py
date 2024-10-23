@@ -6,10 +6,13 @@ from typing import Optional, List
 from .user import UserOut
 from .comment import CommentOut
 
+# schemas/post.py
+
 class PostBase(BaseModel):
     content: str
     photo: Optional[str] = None
     profile_user_id: Optional[int] = None
+    thread_id: Optional[int] = None  # Make thread_id optional
 
 class PostCreate(PostBase):
     pass
@@ -22,10 +25,10 @@ class PostUpdate(BaseModel):
 class PostOut(PostBase):
     post_id: int
     date_created: datetime
-    photo: Optional[str] = None
     user_id: int
     user: UserOut
     comments: List[CommentOut] = []
 
     class Config:
         orm_mode = True
+

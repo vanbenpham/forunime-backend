@@ -20,7 +20,8 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session =
         "email": user.email,
         "username": user.username,
         "profile_picture_url": user.profile_picture_url,  # Assuming you have this field in your User model
-        "date_created": user.date_created.date().isoformat()  # Convert datetime to string
+        "date_created": user.date_created.date().isoformat(),  # Convert datetime to string
+        "role": user.role,
     })
 
 

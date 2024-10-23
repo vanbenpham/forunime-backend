@@ -10,6 +10,7 @@ class UserOut(BaseModel):
     username: str
     date_created: str
     profile_picture_url: str
+    role: str
 
     class Config:
         orm_mode = True
