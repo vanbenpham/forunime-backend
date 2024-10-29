@@ -124,10 +124,11 @@ def delete_comment(
             detail=f"Comment with id: {id} does not exist"
         )
 
-    if comment.user_id != current_user.user_id:
+    # Allow deletion if the user is the owner or an admin
+    if comment.user_id != current_user.user_id and current_user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to perform requested action"
+            detail="Not authorized to perform the requested action"
         )
 
     comment_query.delete(synchronize_session=False)
@@ -151,10 +152,11 @@ def update_comment(
             detail=f"Comment with id: {id} does not exist"
         )
 
-    if comment.user_id != current_user.user_id:
+    # Allow update if the user is the owner or an admin
+    if comment.user_id != current_user.user_id and current_user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to perform requested action"
+            detail="Not authorized to perform the requested action"
         )
 
     comment_query.update(updated_comment.dict(exclude_unset=True), synchronize_session=False)

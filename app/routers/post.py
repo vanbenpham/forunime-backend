@@ -26,13 +26,10 @@ def get_posts(
     )
 
     if thread_id is not None:
-        # Fetch posts belonging to a specific thread
         posts_query = posts_query.filter(models.Post.thread_id == thread_id)
     elif profile_user_id is not None:
-        # Fetch personal posts of a user
         posts_query = posts_query.filter(models.Post.profile_user_id == profile_user_id)
     else:
-        # Fetch all posts (you may adjust this logic as needed)
         posts_query = posts_query.filter(models.Post.thread_id == None)
 
     if search:
@@ -48,7 +45,6 @@ def create_post(
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
     if post.thread_id:
-        # Validate that the thread exists
         thread = db.query(models.Thread).filter(models.Thread.thread_id == post.thread_id).first()
         if not thread:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
@@ -68,7 +64,6 @@ def create_post(
     ).filter(models.Post.post_id == new_post.post_id).first()
 
     return post_with_user
-
 
 @router.get("/{id}", response_model=schemas.PostOut)
 def get_post(
@@ -102,10 +97,11 @@ def delete_post(
             detail=f"Post with id: {id} does not exist"
         )
 
-    if post.user_id != current_user.user_id:
+    # Allow deletion if the user is the owner or an admin
+    if post.user_id != current_user.user_id and current_user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to perform requested action"
+            detail="Not authorized to perform the requested action"
         )
 
     post_query.delete(synchronize_session=False)
@@ -129,10 +125,11 @@ def update_post(
             detail=f"Post with id: {id} does not exist"
         )
 
-    if post.user_id != current_user.user_id:
+    # Allow update if the user is the owner or an admin
+    if post.user_id != current_user.user_id and current_user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to perform requested action"
+            detail="Not authorized to perform the requested action"
         )
 
     post_query.update(updated_post.dict(exclude_unset=True), synchronize_session=False)
