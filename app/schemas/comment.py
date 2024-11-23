@@ -11,7 +11,10 @@ class CommentBase(BaseModel):
     content: str
     photo: Optional[str] = None
     parent_comment_id: Optional[int] = None
-    post_id: int
+    post_id: Optional[int] = None
+    review_id: Optional[int] = None
+    rate: Optional[int] = None  # Add this line
+
 
 class CommentCreate(CommentBase):
     pass
@@ -19,6 +22,8 @@ class CommentCreate(CommentBase):
 class CommentUpdate(BaseModel):
     content: Optional[str] = None
     photo: Optional[str] = None
+    rate: Optional[int] = None  # Add this line
+
 
 class CommentOut(BaseModel):
     comment_id: int
@@ -29,8 +34,12 @@ class CommentOut(BaseModel):
     user: UserOut
     parent_comment_id: Optional[int] = None
     replies: List['CommentOut'] = []
+    post_id: Optional[int] = None
+    review_id: Optional[int] = None
+    rate: Optional[int] = None  # Add this line
 
     class Config:
         orm_mode = True
+
 
 CommentOut.update_forward_refs()
