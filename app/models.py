@@ -1,8 +1,24 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint, Table
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from .database import Base
+
+# Association Table for Group Members
+group_members = Table(
+    "group_members",
+    Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.group_id"), primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.user_id"), primary_key=True)
+)
+
+# Association Table for Group Co-Owners
+group_co_owners = Table(
+    "group_co_owners",
+    Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.group_id"), primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.user_id"), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = "users"
@@ -20,7 +36,7 @@ class User(Base):
         server_default=text('now()')
     )
     role = Column(String, default='user')
-    
+
     # Relationships
     posts = relationship(
         'Post',
@@ -34,14 +50,53 @@ class User(Base):
         foreign_keys='Post.profile_user_id'
     )
     comments = relationship('Comment', back_populates='user', cascade='all, delete-orphan')
-    
-    # Add the 'reviews' relationship
+
     reviews = relationship(
         'Review',
         back_populates='user',
         cascade='all, delete-orphan',
         foreign_keys='Review.feedback_owner_id'
     )
+    
+    # Relationships for Groups and Messages
+    messages_sent = relationship("Message", foreign_keys='Message.sender_id', back_populates="sender")
+    messages_received = relationship("Message", foreign_keys='Message.receiver_id', back_populates="receiver")
+    owned_groups = relationship("Group", foreign_keys='Group.owner_id', back_populates="owner")
+    groups = relationship("Group", secondary="group_members", back_populates="members")
+    co_owned_groups = relationship("Group", secondary="group_co_owners", back_populates="co_owners")
+
+class Group(Base):
+    __tablename__ = "groups"
+    group_id = Column(Integer, primary_key=True, nullable=False)
+    group_name = Column(String, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    date_created = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text('now()')
+    )
+
+    # Relationships
+    owner = relationship("User", foreign_keys=[owner_id], back_populates="owned_groups")
+    members = relationship("User", secondary=group_members, back_populates="groups")
+    co_owners = relationship("User", secondary=group_co_owners, back_populates="co_owned_groups")
+
+class Message(Base):
+    __tablename__ = "messages"
+    message_id = Column(Integer, primary_key=True, nullable=False)
+    content = Column(String, nullable=False)
+    photo = Column(String, nullable=True)
+    date_created = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    sender_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True)
+    group_id = Column(Integer, ForeignKey("groups.group_id"), nullable=True)
+    deleted_for_receiver = Column(Boolean, default=False)
+    
+    # Add these relationships to match what's in User model
+    sender = relationship("User", foreign_keys=[sender_id], back_populates="messages_sent")
+    receiver = relationship("User", foreign_keys=[receiver_id], back_populates="messages_received")
+    group = relationship("Group", backref="messages")
+
 
 class Post(Base):
     __tablename__ = "posts"
@@ -140,38 +195,8 @@ class Thread(Base):
         UniqueConstraint('thread_name', name='unique_thread_name'),
     )
 
-class Message(Base):
-    __tablename__ = "messages"
-    message_id = Column(Integer, primary_key=True, nullable=False)
-    content = Column(String, nullable=False)
-    photo = Column(String, nullable=True)
-    date_created = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=text('now()')
-    )
-    user_id_sender = Column(
-        Integer,
-        ForeignKey("users.user_id", ondelete="CASCADE"),
-        nullable=False
-    )
-    user_id_receiver = Column(
-        Integer,
-        ForeignKey("users.user_id", ondelete="CASCADE"),
-        nullable=False
-    )
-    
-    # Relationships
-    sender = relationship(
-        "User",
-        foreign_keys=[user_id_sender],
-        backref="messages_sent"
-    )
-    receiver = relationship(
-        "User",
-        foreign_keys=[user_id_receiver],
-        backref="messages_received"
-    )
+
+
 
 # models.py
 

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models
 from .database import engine
-from .routers import auth, user, post, comment, thread, review
+from .routers import auth, user, post, comment, thread, review, message, group
 from .config import settings
 
 models.Base.metadata.create_all(bind=engine)
@@ -13,7 +13,7 @@ origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -25,6 +25,8 @@ app.include_router(post.router)
 app.include_router(comment.router)
 app.include_router(thread.router)
 app.include_router(review.router)
+app.include_router(group.router)
+app.include_router(message.router)
 
 @app.get("/")
 def read_root():
